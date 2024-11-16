@@ -1,5 +1,5 @@
 variables:
-  IMAGE_NAME: "registry.inqbeo.de/dev/zabbix-server-create-upgrade-db"
+  IMAGE_NAME: "registry.inqbeo.de/zabbix-dev/zabbix-server-create-upgrade-db"
 
 stages:
 - build
