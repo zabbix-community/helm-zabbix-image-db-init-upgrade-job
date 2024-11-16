@@ -1,4 +1,5 @@
-FROM zabbix/zabbix-server-pgsql:alpine-7.0.4
+ARG MAJOR_VERSION
+FROM zabbix/zabbix-server-pgsql:alpine-${MAJOR_VERSION}-latest
 USER root
 RUN apk add kubectl
 COPY docker-entrypoint-run-replace.sh /tmp/docker-entrypoint-run-replace.sh

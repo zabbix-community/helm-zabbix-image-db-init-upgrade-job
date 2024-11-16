@@ -5,7 +5,7 @@ stages:
 - build
 - manifest
 
-build_x86_64:
+.build_x86_64_template:
   tags:
   - k8s
   - nonpriv
@@ -20,8 +20,9 @@ build_x86_64:
   - echo ${DOCKERCFG_HARBOR} > /kaniko/.docker/config.json
   - MYDATE=${CI_JOB_STARTED_AT%T*}
   - >-
-    /kaniko/executor --context "${CI_PROJECT_DIR}" --build-arg "RUNNER_ARCH=amd64" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${IMAGE_NAME}:${MYDATE}-${CI_PIPELINE_ID}-amd64" --verbosity info #magic___^_^___line #magic___^_^___line #magic___^_^___line
-build_arm64:
+    /kaniko/executor --context "${CI_PROJECT_DIR}" --build-arg "RUNNER_ARCH=amd64" --build-arg "MAJOR_VERSION=${MAJOR_VERSION}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${IMAGE_NAME}:${CI_PIPELINE_ID}-${MAJOR_VERSION}-amd64" --verbosity info #magic___^_^___line #magic___^_^___line #magic___^_^___line
+
+.build_arm64_template:
   tags:
   - k8s
   - nonpriv
@@ -35,8 +36,9 @@ build_arm64:
   - echo ${DOCKERCFG_HARBOR} > /kaniko/.docker/config.json
   - MYDATE=${CI_JOB_STARTED_AT%T*}
   - >-
-    /kaniko/executor --context "${CI_PROJECT_DIR}" --build-arg "RUNNER_ARCH=arm64" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${IMAGE_NAME}:${MYDATE}-${CI_PIPELINE_ID}-arm64" --verbosity info #magic___^_^___line #magic___^_^___line #magic___^_^___line
-create_manifest:
+    /kaniko/executor --context "${CI_PROJECT_DIR}" --build-arg "RUNNER_ARCH=arm64" --build-arg "MAJOR_VERSION=${MAJOR_VERSION}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${IMAGE_NAME}:${CI_PIPELINE_ID}-${MAJOR_VERSION}-arm64" --verbosity info #magic___^_^___line #magic___^_^___line #magic___^_^___line
+
+.create_manifest_template:
   tags:
   - k8s
   - nonpriv
@@ -49,9 +51,36 @@ create_manifest:
   - mv manifest-tool-linux-arm64 manifest-tool
   - chmod +x manifest-tool
   script:
-  - MYDATE=${CI_JOB_STARTED_AT%T*}
-  - echo "found version ${VERSION}"
+  - echo "Creating manifest for MAJOR_VERSION=$MAJOR_VERSION"
   - mkdir ~/.docker
   - echo ${DOCKERCFG_HARBOR} > ~/.docker/config.json
-  - ./manifest-tool --docker-cfg ~/.docker/config.json push from-args --platforms linux/amd64,linux/arm64 --template ${IMAGE_NAME}:${MYDATE}-${CI_PIPELINE_ID}-ARCH --target ${IMAGE_NAME}:7.0-latest
-  - ./manifest-tool --docker-cfg ~/.docker/config.json inspect ${IMAGE_NAME}:7.0-latest
+  - ./manifest-tool --docker-cfg ~/.docker/config.json push from-args --platforms linux/amd64,linux/arm64 --template ${IMAGE_NAME}:${CI_PIPELINE_ID}-${MAJOR_VERSION}-ARCH --target ${IMAGE_NAME}:${MAJOR_VERSION}-latest
+  - ./manifest-tool --docker-cfg ~/.docker/config.json inspect ${IMAGE_NAME}:${MAJOR_VERSION}-latest
+
+# Matrix builds for architectures
+build_arm64:
+  stage: build
+  parallel:
+    matrix:
+      - MAJOR_VERSION: "6.0"
+      - MAJOR_VERSION: "6.4"
+      - MAJOR_VERSION: "7.0"
+  extends: .build_arm64_template
+
+build_amd64:
+  stage: build
+  parallel:
+    matrix:
+      - MAJOR_VERSION: "6.0"
+      - MAJOR_VERSION: "6.4"
+      - MAJOR_VERSION: "7.0"
+  extends: .build_amd64_template
+
+create_manifest:
+  stage: manifest
+  parallel:
+    matrix:
+      - MAJOR_VERSION: "6.0"
+      - MAJOR_VERSION: "6.4"
+      - MAJOR_VERSION: "7.0"
+  extends: .create_manifest_template
