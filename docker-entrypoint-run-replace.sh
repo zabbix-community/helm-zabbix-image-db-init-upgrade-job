@@ -49,7 +49,7 @@ init_and_upgrade_db() {
 
 if [ "$1" == "init_and_upgrade_db" ]; then
     prepare_server
-    prepare_and_upgrade_db
+    init_and_upgrade_db
 else
     exec "$@"
 fi
