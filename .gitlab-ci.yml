@@ -58,6 +58,15 @@ stages:
   - ./manifest-tool --docker-cfg ~/.docker/config.json inspect ${IMAGE_NAME}:${MAJOR_VERSION}-latest
 
 # Matrix builds for architectures
+build_x86_64:
+  stage: build
+  parallel:
+    matrix:
+      - MAJOR_VERSION: "6.0"
+      - MAJOR_VERSION: "6.4"
+      - MAJOR_VERSION: "7.0"
+  extends: .build_x86_64_template
+
 build_arm64:
   stage: build
   parallel:
@@ -66,15 +75,6 @@ build_arm64:
       - MAJOR_VERSION: "6.4"
       - MAJOR_VERSION: "7.0"
   extends: .build_arm64_template
-
-build_amd64:
-  stage: build
-  parallel:
-    matrix:
-      - MAJOR_VERSION: "6.0"
-      - MAJOR_VERSION: "6.4"
-      - MAJOR_VERSION: "7.0"
-  extends: .build_amd64_template
 
 create_manifest:
   stage: manifest
