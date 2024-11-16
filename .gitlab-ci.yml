@@ -54,4 +54,4 @@ create_manifest:
   - mkdir ~/.docker
   - echo ${DOCKERCFG_HARBOR} > ~/.docker/config.json
   - ./manifest-tool --docker-cfg ~/.docker/config.json push from-args --platforms linux/amd64,linux/arm64 --template ${IMAGE_NAME}:${MYDATE}-${CI_PIPELINE_ID}-ARCH --target ${IMAGE_NAME}:7.0-latest
-  - ./manifest-tool --docker-cfg ~/.docker/config.json inspect ${IMAGE_NAME}:${VERSION}
+  - ./manifest-tool --docker-cfg ~/.docker/config.json inspect ${IMAGE_NAME}:7.0-latest
