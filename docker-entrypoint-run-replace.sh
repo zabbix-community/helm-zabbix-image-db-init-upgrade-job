@@ -1,7 +1,7 @@
 
 init_and_upgrade_db() {
     # get version of db schema and version of zabbix server within this image
-    db_version=$(psql -U "${DB_SERVER_ROOT_USER}" -h ${DB_SERVER_HOST} -p "${DB_SERVER_PORT}" -d "${DB_SERVER_DBNAME}" -t -A -c "SELECT mandatory FROM dbversion;")
+    db_version=$(psql_query "SELECT mandatory FROM dbversion" "${DB_SERVER_DBNAME}")
     db_version_major=${db_version:0:2}
     zbx_version_major=$(/usr/sbin/zabbix_server --version | head -n 1 | sed -E 's/.* ([0-9]+)\.([0-9]+)\..*/\1\2/')
     echo "db_version_major: ${db_version_major}, zbx_version_major: ${zbx_version_major}"
@@ -15,7 +15,7 @@ init_and_upgrade_db() {
         WAIT_TIMEOUT=1
         while true :
         do
-            active_servers=$(psql -U "${DB_SERVER_ROOT_USER}" -h ${DB_SERVER_HOST} -p "${DB_SERVER_PORT}" -d "${DB_SERVER_DBNAME}" -t -A -c "SELECT COUNT(*) FROM ha_node WHERE lastaccess >= extract(epoch from now()) - 10;")
+            active_servers=$(psql_query "SELECT COUNT(*) FROM ha_node WHERE lastaccess >= extract(epoch from now()) - 10" "${DB_SERVER_DBNAME}")
             if [ ${active_servers} -eq 0 ]; then
                 break
             fi
