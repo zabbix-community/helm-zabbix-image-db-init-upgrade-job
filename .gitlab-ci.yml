@@ -1,0 +1,57 @@
+variables:
+  IMAGE_NAME: "registry.inqbeo.de/dev/zabbix-server-create-upgrade-db"
+
+stages:
+- build
+- manifest
+
+build_x86_64:
+  tags:
+  - k8s
+  - nonpriv
+  - amd64
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  retry: 2
+  script:
+  - mkdir -p /kaniko/.docker
+  - echo ${DOCKERCFG_HARBOR} > /kaniko/.docker/config.json
+  - MYDATE=${CI_JOB_STARTED_AT%T*}
+  - >-
+    /kaniko/executor --context "${CI_PROJECT_DIR}" --build-arg "RUNNER_ARCH=amd64" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${IMAGE_NAME}:${MYDATE}-${CI_PIPELINE_ID}-amd64" --verbosity info #magic___^_^___line #magic___^_^___line #magic___^_^___line
+build_arm64:
+  tags:
+  - k8s
+  - nonpriv
+  - arm64
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+  - mkdir -p /kaniko/.docker
+  - echo ${DOCKERCFG_HARBOR} > /kaniko/.docker/config.json
+  - MYDATE=${CI_JOB_STARTED_AT%T*}
+  - >-
+    /kaniko/executor --context "${CI_PROJECT_DIR}" --build-arg "RUNNER_ARCH=arm64" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${IMAGE_NAME}:${MYDATE}-${CI_PIPELINE_ID}-arm64" --verbosity info #magic___^_^___line #magic___^_^___line #magic___^_^___line
+create_manifest:
+  tags:
+  - k8s
+  - nonpriv
+  - arm64
+  stage: manifest
+  image:
+    name: curlimages/curl
+  before_script:
+  - curl -s -L https://github.com/estesp/manifest-tool/releases/download/v2.1.6/binaries-manifest-tool-2.1.6.tar.gz | tar xvz
+  - mv manifest-tool-linux-arm64 manifest-tool
+  - chmod +x manifest-tool
+  script:
+  - MYDATE=${CI_JOB_STARTED_AT%T*}
+  - echo "found version ${VERSION}"
+  - mkdir ~/.docker
+  - echo ${DOCKERCFG_HARBOR} > ~/.docker/config.json
+  - ./manifest-tool --docker-cfg ~/.docker/config.json push from-args --platforms linux/amd64,linux/arm64 --template ${IMAGE_NAME}:${MYDATE}-${CI_PIPELINE_ID}-ARCH --target ${IMAGE_NAME}:7.0-latest
+  - ./manifest-tool --docker-cfg ~/.docker/config.json inspect ${IMAGE_NAME}:${VERSION}
