@@ -93,7 +93,6 @@ init_and_upgrade_db() {
         while true :
         do
             active_servers=$(psql_query "SELECT COUNT(*) FROM ha_node WHERE lastaccess >= extract(epoch from now()) - 60 AND status=3 and name=''" "${DB_SERVER_DBNAME}")
-	    echo "DEBUG active_servers: ${active_servers}"
             if [ ${active_servers} -eq 0 ]; then
                 echo "*** none found, continuing"
                 break
@@ -107,7 +106,6 @@ init_and_upgrade_db() {
             while true :
             do
                 deployment_pods=$(kubectl get pods -l app=${ZBX_SERVER_DEPLOYMENT_NAME} -o custom-columns=NAME:.metadata.name --no-headers | wc -l)
-		echo "DEBUG deployment_pods: ${deployment_pods}"
                 if [ ${deployment_pods} -eq 0 ]; then
                     break
                 fi
