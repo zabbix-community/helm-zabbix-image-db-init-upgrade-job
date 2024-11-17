@@ -62,7 +62,7 @@ init_and_upgrade_db() {
         WAIT_TIMEOUT=1
         while true :
         do
-            active_servers=$(psql_query "SELECT COUNT(*) FROM ha_node WHERE lastaccess >= extract(epoch from now()) - 10" "${DB_SERVER_DBNAME}")
+            active_servers=$(psql_query "SELECT COUNT(*) FROM ha_node WHERE lastaccess >= extract(epoch from now()) - 10 and status in (0, 3)" "${DB_SERVER_DBNAME}")
             if [ ${active_servers} -eq 0 ]; then
                 break
             fi
@@ -95,7 +95,7 @@ init_and_upgrade_db() {
         echo "** checking for eventually yet connected active non-HA mode pods of Zabbix Server..."
         while true :
         do
-            active_servers=$(psql_query "SELECT COUNT(*) FROM ha_node WHERE lastaccess >= extract(epoch from now()) - 60 AND state=3 and name=''" "${DB_SERVER_DBNAME}")
+            active_servers=$(psql_query "SELECT COUNT(*) FROM ha_node WHERE lastaccess >= extract(epoch from now()) - 60 AND status=3 and name=''" "${DB_SERVER_DBNAME}")
 	    echo "DEBUG active_servers: ${active_servers}"
             if [ ${active_servers} -eq 0 ]; then
                 echo "*** none found, continuing"
