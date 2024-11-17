@@ -8,11 +8,6 @@ init_and_upgrade_db() {
     echo "db_version_major: ${db_version_major}, zbx_version_major: ${zbx_version_major}"
 
 
-
-
-
-
-
     # compare those and figure whether a major release upgrade is necessary
     if [ ${zbx_version_major} -gt ${db_version_major} ]; then
 
@@ -81,9 +76,11 @@ init_and_upgrade_db() {
         # we are ready to go
         exit 0
 
+
     elif [ ${zbx_version_major} -lt ${db_version_major} ]; then
         echo "*** FATAL database schema version ${db_version_major} is higher than zabbix server's ${zbx_version_major}, downgrade is not supported!"
         exit 252
+
 
     else
         echo "*** DB schema is up-to-date, checking for whether we come from a non-HA enabled setup"
