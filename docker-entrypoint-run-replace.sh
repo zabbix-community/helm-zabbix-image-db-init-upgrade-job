@@ -2,6 +2,7 @@
 init_and_upgrade_db() {
     # get version of db schema and version of zabbix server within this image
     db_version=$(psql_query "SELECT mandatory FROM dbversion" "${DB_SERVER_DBNAME}")
+    echo "DB version found: ${db_version} in database ${DB_SERVER_DBNAME} and user ${DB_SERVER_ROOT_USER} on host ${DB_SERVER_HOST}"
     db_version_major=${db_version:0:2}
     zbx_version_major=$(/usr/sbin/zabbix_server --version | head -n 1 | sed -E 's/.* ([0-9]+)\.([0-9]+)\..*/\1\2/')
     echo "db_version_major: ${db_version_major}, zbx_version_major: ${zbx_version_major}"
@@ -44,11 +45,19 @@ init_and_upgrade_db() {
         rm "$PIPE"
 
         # we are ready to go
+	exit 0
+    elif [ ${zbx_version_major} -lt ${db_version_major} ]; then
+        echo "*** FATAL database schema version ${db_version_major} is higher than zabbix server's ${zbx_version_major}, downgrade is not supported!"
+	exit 252
+    else
+        echo "*** DB schema is up-to-date"
+	exit 0
     fi
 }
 
 if [ "$1" == "init_and_upgrade_db" ]; then
-    prepare_server
+    prepare_db
+    update_zbx_config
     init_and_upgrade_db
 else
     exec "$@"
