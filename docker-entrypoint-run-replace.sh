@@ -10,6 +10,7 @@ init_and_upgrade_db() {
     # compare those and figure whether a major release upgrade is necessary
     if [ ${zbx_version_major} -gt ${db_version_major} ]; then
         # scale down existing Zabbix deployment
+	echo "** scaling down zabbix server deployment with name ${ZBX_DEPLOYMENT_NAME} to 0 replicas"
         kubectl scale deploy ${ZBX_DEPLOYMENT_NAME} --replicas=0
 
         # wait for no active zabbix_servers speaking with the db anymore
