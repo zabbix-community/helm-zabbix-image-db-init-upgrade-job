@@ -121,6 +121,9 @@ init_and_upgrade_db() {
             # delete entries from db table
 	    echo "*** deleting non-HA enabled nodes from ha_nodes table"
             psql_query "DELETE FROM ha_node WHERE name='' and status=3" "${DB_SERVER_DBNAME}"
+
+	    echo "*** scale deployment ${ZBX_SERVER_DEPLOYMENT_NAME} to ${deployment_replicas}"
+            kubectl scale deploy ${ZBX_SERVER_DEPLOYMENT_NAME} --replicas=${deployment_replicas}
         done
         exit 0
     fi
