@@ -20,10 +20,11 @@ init_and_upgrade_db() {
         while true :
         do
             active_servers=$(psql_query "SELECT COUNT(*) FROM ha_node WHERE lastaccess >= extract(epoch from now()) - 10" "${DB_SERVER_DBNAME}")
-            if [ ${active_servers} -eq 0 ]; then
+	    deployment_pods=$(kubectl get pods -l app=${ZBX_SERVER_DEPLOYMENT_NAME} -o custom-columns=NAME:.metadata.name --no-headers | wc -l)
+            if [ ${active_servers} -eq 0 -a ${deployment_pods} -eq 0 ]; then
                 break
             fi
-            echo "**** ${active_servers} active zabbix_server instances seen within less than 10 seconds... waiting"
+            echo "**** ${active_servers} active zabbix_server instances seen within less than 10 seconds and ${deployment_pods} pods of deployment ${ZBX_SERVER_DEPLOYMENT_NAME} still running... waiting"
             sleep $WAIT_TIMEOUT
         done
 
@@ -47,6 +48,17 @@ init_and_upgrade_db() {
         # Clean up by removing the named pipe
         rm "$PIPE"
 
+        # wait for no active zabbix_servers speaking with the db anymore
+        WAIT_TIMEOUT=1
+        while true :
+        do
+            active_servers=$(psql_query "SELECT COUNT(*) FROM ha_node WHERE lastaccess >= extract(epoch from now()) - 10" "${DB_SERVER_DBNAME}")
+            if [ ${active_servers} -eq 0 ]; then
+                break
+            fi
+            echo "**** ${active_servers} active zabbix_server instances seen within less than 10 seconds... waiting"
+            sleep $WAIT_TIMEOUT
+        done
 	# scale up the deployment again
 	echo "** scaling up zabbix server deployment with name ${ZBX_SERVER_DEPLOYMENT_NAME} to ${deployment_replicas} replicas"
         kubectl scale deploy ${ZBX_SERVER_DEPLOYMENT_NAME} --replicas=${deployment_replicas}
