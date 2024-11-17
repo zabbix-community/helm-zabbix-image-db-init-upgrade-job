@@ -9,9 +9,11 @@ init_and_upgrade_db() {
 
     # compare those and figure whether a major release upgrade is necessary
     if [ ${zbx_version_major} -gt ${db_version_major} ]; then
+
         # scale down existing Zabbix deployment
-	echo "** scaling down zabbix server deployment with name ${ZBX_DEPLOYMENT_NAME} to 0 replicas"
-        kubectl scale deploy ${ZBX_DEPLOYMENT_NAME} --replicas=0
+	deployment_replicas=$(kubectl get deploy ${ZBX_SERVER_DEPLOYMENT_NAME} -o jsonpath='{.spec.replicas}')
+	echo "** scaling zabbix server deployment with name ${ZBX_SERVER_DEPLOYMENT_NAME} from ${deployment_replicas} to 0 replicas"
+        kubectl scale deploy ${ZBX_SERVER_DEPLOYMENT_NAME} --replicas=0
 
         # wait for no active zabbix_servers speaking with the db anymore
         WAIT_TIMEOUT=1
@@ -44,6 +46,10 @@ init_and_upgrade_db() {
 
         # Clean up by removing the named pipe
         rm "$PIPE"
+
+	# scale up the deployment again
+	echo "** scaling up zabbix server deployment with name ${ZBX_SERVER_DEPLOYMENT_NAME} to ${deployment_replicas} replicas"
+        kubectl scale deploy ${ZBX_DEPLOYMENT_NAME} --replicas=${deployment_replicas}
 
         # we are ready to go
 	exit 0
