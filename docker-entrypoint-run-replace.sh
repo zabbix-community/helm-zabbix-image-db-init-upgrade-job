@@ -49,7 +49,7 @@ init_and_upgrade_db() {
 
 	# scale up the deployment again
 	echo "** scaling up zabbix server deployment with name ${ZBX_SERVER_DEPLOYMENT_NAME} to ${deployment_replicas} replicas"
-        kubectl scale deploy ${ZBX_DEPLOYMENT_NAME} --replicas=${deployment_replicas}
+        kubectl scale deploy ${ZBX_SERVER_DEPLOYMENT_NAME} --replicas=${deployment_replicas}
 
         # we are ready to go
 	exit 0
