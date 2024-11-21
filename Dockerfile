@@ -2,6 +2,7 @@ ARG MAJOR_VERSION
 FROM zabbix/zabbix-server-pgsql:alpine-${MAJOR_VERSION}-latest
 USER root
 RUN apk add kubectl
+RUN sed '/^\s\+DB_EXISTS=/a\ \ \  echo "db_exists check returned \"${DB_EXISTS}\"... (server name: ${DB_SERVER_DBNAME})"' -i /usr/bin/docker-entrypoint.sh
 COPY docker-entrypoint-run-replace.sh /tmp/docker-entrypoint-run-replace.sh
 RUN awk '/^#################################################/ {print; exit} {print}' /usr/bin/docker-entrypoint.sh > /tmp/temp-script && \
     cat /tmp/docker-entrypoint-run-replace.sh >> /tmp/temp-script && \
