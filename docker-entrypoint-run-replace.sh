@@ -125,6 +125,8 @@ init_and_upgrade_db() {
 }
 
 if [ "$1" == "init_and_upgrade_db" ]; then
+    echo "sleeping 10 seconds..."
+    sleep 10
     prepare_db
     update_zbx_config
     init_and_upgrade_db
