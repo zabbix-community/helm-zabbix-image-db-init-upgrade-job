@@ -1,7 +1,7 @@
 
 init_and_upgrade_db() {
     # get version of db schema and version of zabbix server within this image
-    db_version=$(psql_query "SELECT mandatory FROM dbversion" "${DB_SERVER_DBNAME}")
+    db_version=$(psql_query "SELECT mandatory FROM ${DB_SERVER_SCHEMA}.dbversion" "${DB_SERVER_DBNAME}")
     echo "DB version found: ${db_version} in database ${DB_SERVER_DBNAME} and user ${DB_SERVER_ROOT_USER} on host ${DB_SERVER_HOST}"
     db_version_major=${db_version:0:4}
     zbx_version_major=$(/usr/sbin/zabbix_server --version | head -n 1 | sed -E 's/.* ([0-9]+)\.([0-9]+)\..*/\10\20/')
@@ -24,7 +24,7 @@ init_and_upgrade_db() {
         WAIT_TIMEOUT=1
         while true :
         do
-            active_servers=$(psql_query "SELECT COUNT(*) FROM ha_node WHERE lastaccess >= extract(epoch from now()) - 10" "${DB_SERVER_DBNAME}")
+            active_servers=$(psql_query "SELECT COUNT(*) FROM ${DB_SERVER_SCHEMA}.ha_node WHERE lastaccess >= extract(epoch from now()) - 10" "${DB_SERVER_DBNAME}")
             deployment_pods=$(kubectl get pods -l app=${ZBX_SERVER_DEPLOYMENT_NAME} -o custom-columns=NAME:.metadata.name --no-headers | wc -l)
             if [ ${active_servers} -eq 0 -a ${deployment_pods} -eq 0 ]; then
                 break
@@ -57,7 +57,7 @@ init_and_upgrade_db() {
         WAIT_TIMEOUT=1
         while true :
         do
-            active_servers=$(psql_query "SELECT COUNT(*) FROM ha_node WHERE lastaccess >= extract(epoch from now()) - 10 and status in (0, 3)" "${DB_SERVER_DBNAME}")
+            active_servers=$(psql_query "SELECT COUNT(*) FROM ${DB_SERVER_SCHEMA}.ha_node WHERE lastaccess >= extract(epoch from now()) - 10 and status in (0, 3)" "${DB_SERVER_DBNAME}")
             if [ ${active_servers} -eq 0 ]; then
                 break
             fi
@@ -67,7 +67,7 @@ init_and_upgrade_db() {
 
         # delete remaining active standalone server entries from ha_node table in order that the ha-enabled ones can start up
         # otherwise they will most probably fail for >1 minute
-        psql_query "DELETE FROM ha_node WHERE name='' and status=3" "${DB_SERVER_DBNAME}"
+        psql_query "DELETE FROM ${DB_SERVER_SCHEMA}.ha_node WHERE name='' and status=3" "${DB_SERVER_DBNAME}"
 
         # scale up the deployment again
         echo "** scaling up zabbix server deployment with name ${ZBX_SERVER_DEPLOYMENT_NAME} to ${deployment_replicas} replicas"
@@ -92,7 +92,7 @@ init_and_upgrade_db() {
         echo "** checking for eventually yet connected active non-HA mode pods of Zabbix Server..."
         while true :
         do
-            active_servers=$(psql_query "SELECT COUNT(*) FROM ha_node WHERE lastaccess >= extract(epoch from now()) - 60 AND status=3 and name=''" "${DB_SERVER_DBNAME}")
+            active_servers=$(psql_query "SELECT COUNT(*) FROM ${DB_SERVER_SCHEMA}.ha_node WHERE lastaccess >= extract(epoch from now()) - 60 AND status=3 and name=''" "${DB_SERVER_DBNAME}")
             if [ ${active_servers} -eq 0 ]; then
                 echo "*** none found, continuing"
                 break
@@ -115,7 +115,7 @@ init_and_upgrade_db() {
 
             # delete entries from db table
 	    echo "*** deleting non-HA enabled nodes from ha_nodes table"
-            psql_query "DELETE FROM ha_node WHERE name='' and status=3" "${DB_SERVER_DBNAME}"
+            psql_query "DELETE FROM ${DB_SERVER_SCHEMA}.ha_node WHERE name='' and status=3" "${DB_SERVER_DBNAME}"
 
 	    echo "*** scale deployment ${ZBX_SERVER_DEPLOYMENT_NAME} to ${deployment_replicas}"
             kubectl scale deploy ${ZBX_SERVER_DEPLOYMENT_NAME} --replicas=${deployment_replicas}
