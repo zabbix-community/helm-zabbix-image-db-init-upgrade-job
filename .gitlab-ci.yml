@@ -65,6 +65,7 @@ build_x86_64:
       - MAJOR_VERSION: "6.0"
       - MAJOR_VERSION: "6.4"
       - MAJOR_VERSION: "7.0"
+      - MAJOR_VERSION: "7.2"
   extends: .build_x86_64_template
 
 build_arm64:
@@ -74,6 +75,7 @@ build_arm64:
       - MAJOR_VERSION: "6.0"
       - MAJOR_VERSION: "6.4"
       - MAJOR_VERSION: "7.0"
+      - MAJOR_VERSION: "7.2"
   extends: .build_arm64_template
 
 create_manifest:
@@ -83,4 +85,5 @@ create_manifest:
       - MAJOR_VERSION: "6.0"
       - MAJOR_VERSION: "6.4"
       - MAJOR_VERSION: "7.0"
+      - MAJOR_VERSION: "7.2"
   extends: .create_manifest_template
