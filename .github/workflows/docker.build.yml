@@ -58,4 +58,4 @@ jobs:
             MAJOR_VERSION=${{ matrix.major_version }}
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ matrix.major_version }}-${{ BUILD_TIMESTAMP }}
+            ${{ env.IMAGE_NAME }}:${{ matrix.major_version }}-${{ env.BUILD_TIMESTAMP }}
