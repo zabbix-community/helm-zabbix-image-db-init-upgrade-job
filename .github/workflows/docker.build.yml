@@ -19,8 +19,7 @@ jobs:
         id: set-timestamp
         run: |
           echo "build_timestamp=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_ENV
-        env:
-          build_timestamp: ${{ env.build_timestamp }}
+          echo "build_timestamp=${build_timestamp}" >> $GITHUB_OUTPUT
 
   build-and-push:
     name: Build and Push Multi-Arch Images
