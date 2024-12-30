@@ -9,8 +9,20 @@ env:
   IMAGE_NAME: ghcr.io/zabbix-community/zabbix-server-create-upgrade-db
 
 jobs:
+  set-timestamp:
+    name: Set Global Timestamp
+    runs-on: ubuntu-latest
+    outputs:
+      build_timestamp: ${{ steps.set-timestamp.outputs.timestamp }}
+    steps:
+      - name: Calculate Build Timestamp
+        id: set-timestamp
+        run: |
+          echo "::set-output name=timestamp::$(date -u +%Y%m%d%H%M%S)"
+
   build-and-push:
     name: Build and Push Multi-Arch Images
+    needs: set-timestamp
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -29,10 +41,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set Build Timestamp
-        id: timestamp
-        run: echo "BUILD_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_ENV
-
       - name: Build and Push Multi-Arch Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -43,5 +51,4 @@ jobs:
             MAJOR_VERSION=${{ matrix.major_version }}
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ matrix.major_version }}-${{ github.run_id }}
-            ${{ env.IMAGE_NAME }}:${{ matrix.major_version }}-${{ env.BUILD_TIMESTAMP }}
+            ${{ env.IMAGE_NAME }}:${{ matrix.major_version }}-${{ needs.set-timestamp.outputs.build_timestamp }}
