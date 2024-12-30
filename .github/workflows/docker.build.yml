@@ -13,20 +13,20 @@ jobs:
     name: Set Global Timestamp
     runs-on: ubuntu-latest
     outputs:
-      build_timestamp: ${{ steps.set-timestamp.outputs.build_timestamp }}
+      build-timestamp: ${{ steps.set-timestamp.outputs.BUILD_TIMESTAMP }}
     steps:
       - name: Calculate Build Timestamp
         id: set-timestamp
         run: |
-          echo "BUILD_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_ENV
-      - name: Test build timestamp env var
-        run: |
-          echo $BUILD_TIMESTAMP
+          build_timestamp=$(date -u +%Y%m%d%H%M%S)
+          echo "BUILD_TIMESTAMP=$build_timestamp" >> $GITHUB_OUTPUT
 
   build-and-push:
     name: Build and Push Multi-Arch Images
-    needs: set-timestamp
+    needs: [set-timestamp]
     runs-on: ubuntu-latest
+    env:
+      BUILD_TIMESTAMP: ${{ needs.set-timestamp.outputs.build-timestamp }}
     strategy:
       matrix:
         major_version: ["6.0", "6.4", "7.0", "7.2"]
