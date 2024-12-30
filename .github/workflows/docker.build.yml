@@ -18,8 +18,10 @@ jobs:
       - name: Calculate Build Timestamp
         id: set-timestamp
         run: |
-          echo "build_timestamp=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_ENV
-          echo "build_timestamp=${build_timestamp}" >> $GITHUB_OUTPUT
+          echo "BUILD_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_ENV
+      - name: Test build timestamp env var
+        run: |
+          echo $BUILD_TIMESTAMP
 
   build-and-push:
     name: Build and Push Multi-Arch Images
@@ -42,6 +44,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Test build timestamp env var again
+        run: |
+          echo $BUILD_TIMESTAMP
+
       - name: Build and Push Multi-Arch Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -52,4 +58,4 @@ jobs:
             MAJOR_VERSION=${{ matrix.major_version }}
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ matrix.major_version }}-${{ needs.set-timestamp.outputs.build_timestamp }}
+            ${{ env.IMAGE_NAME }}:${{ matrix.major_version }}-${{ BUILD_TIMESTAMP }}
