@@ -11,7 +11,7 @@ init_and_upgrade_db() {
     db_version=$(psql_query "SELECT mandatory FROM ${DB_SERVER_SCHEMA}.dbversion" "${DB_SERVER_DBNAME}")
     echo "DB version found: ${db_version} in database ${DB_SERVER_DBNAME} and user ${DB_SERVER_ROOT_USER} on host ${DB_SERVER_HOST}"
     db_version_major=${db_version:0:4}
-    zbx_version_major=$(/usr/sbin/zabbix_server --version | head -n 1 | sed -E 's/.* ([0-9]+)\.([0-9]+)\..*/\10\20/')
+    zbx_version_major=$(/usr/sbin/zabbix_server --version | sed -nE '1s/.* ([0-9]+)\.([0-9]+)\..*/\10\20/p')
     echo "db_version_major: ${db_version_major}, zbx_version_major: ${zbx_version_major}"
 
 
@@ -26,6 +26,7 @@ init_and_upgrade_db() {
 	# This is actually only needed when this job has been started as a pre-UPGRADE job, as otherwise there would be
 	# no running pods accessing the database
 	if [[ $HELM_HOOK_TYPE == *"upgrade" ]]; then
+		ZBX_SERVER_DEPLOYMENT_NAME="${ZBX_SERVER_DEPLOYMENT_NAME:?ZBX_SERVER_DEPLOYMENT_NAME must be set}"
 		deployment_replicas=$(kubectl get deploy ${ZBX_SERVER_DEPLOYMENT_NAME} -o jsonpath='{.spec.replicas}')
         	echo "** scaling zabbix server deployment with name ${ZBX_SERVER_DEPLOYMENT_NAME} from ${deployment_replicas} to 0 replicas"
         	kubectl scale deploy ${ZBX_SERVER_DEPLOYMENT_NAME} --replicas=0
@@ -53,19 +54,27 @@ init_and_upgrade_db() {
         mkfifo "$PIPE"
         /usr/sbin/zabbix_server --foreground -c /etc/zabbix/zabbix_server.conf > "$PIPE" 2>&1 &
         ZABBIX_PID=$!
-        while IFS= read -r line < "$PIPE"; do
+        schema_upgraded=false
+        while IFS= read -r line; do
             echo "$line"
 
             # Check if the line contains the string "starting HA manager"
             if [[ $line == *"starting HA manager"* ]]; then
                 echo "Found 'starting HA manager' - killing process"
-                kill "$ZABBIX_PID"
+                schema_upgraded=true
+                kill "$ZABBIX_PID" 2>/dev/null || true
                 break
             fi
-        done
+        done < "$PIPE"
+        wait "$ZABBIX_PID" 2>/dev/null || true
 
         # Clean up by removing the named pipe
-        rm "$PIPE"
+        rm -f "$PIPE"
+
+        if [[ $schema_upgraded != true ]]; then
+            echo "*** FATAL zabbix_server exited before reaching 'starting HA manager', database upgrade did not complete"
+            exit 1
+        fi
 
         # wait for no active zabbix_servers speaking with the db anymore
         WAIT_TIMEOUT=1
@@ -107,17 +116,24 @@ init_and_upgrade_db() {
         	fi
 
         	echo "*** found ${active_servers} in db, waiting 10 seconds"
-                sleep $WAIT_TIMEOUT
+                sleep 10
         done
         exit 0
     fi
 }
 
-if [ "$1" == "init_and_upgrade_db" ]; then
+if [ "${1:-}" == "init_and_upgrade_db" ]; then
     echo "sleeping 10 seconds..."
     sleep 10
-    prepare_db
-    update_zbx_config
+    if declare -F prepare_database >/dev/null; then
+        # modular entrypoint (/usr/lib/docker-entrypoint/*.sh), used by 6.0, 7.0, 7.4 and newer images
+        prepare_database
+        update_config
+    else
+        # legacy monolithic entrypoint, used by 6.4 and 7.2 images
+        prepare_db
+        update_zbx_config
+    fi
     init_and_upgrade_db
 else
     exec "$@"
