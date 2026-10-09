@@ -35,6 +35,12 @@ jobs:
       fail-fast: false
       matrix:
         major_version: ["6.0", "6.4", "7.0", "7.2", "7.4"]
+        include:
+          # pre-release: trunk images carry no major release in their tag, so pin a known build by digest
+          # (zabbix/zabbix-server-pgsql:alpine-trunk = 8.0.0rc2 as of 2026-10-09)
+          - major_version: "8.0"
+            tag_prefix: "8.0-trunk"
+            base_image: "zabbix/zabbix-server-pgsql:alpine-trunk@sha256:fa798bd0b8ebc3201672bd418841267e51443fef741931323b0c418086d8b092"
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -60,7 +66,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: |
             MAJOR_VERSION=${{ matrix.major_version }}
+            BASE_IMAGE=${{ matrix.base_image || format('zabbix/zabbix-server-pgsql:alpine-{0}-latest', matrix.major_version) }}
           pull: true
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ matrix.major_version }}-${{ env.BUILD_TIMESTAMP }}
+            ${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix || matrix.major_version }}-${{ env.BUILD_TIMESTAMP }}

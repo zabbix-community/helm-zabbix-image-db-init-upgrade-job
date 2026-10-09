@@ -10,13 +10,23 @@ init_and_upgrade_db() {
     # the zabbix_server binary inside this image.
     db_version=$(psql_query "SELECT mandatory FROM ${DB_SERVER_SCHEMA}.dbversion" "${DB_SERVER_DBNAME}")
     echo "DB version found: ${db_version} in database ${DB_SERVER_DBNAME} and user ${DB_SERVER_ROOT_USER} on host ${DB_SERVER_HOST}"
-    db_version_major=${db_version:0:4}
-    zbx_version_major=$(/usr/sbin/zabbix_server --version | sed -nE '1s/.* ([0-9]+)\.([0-9]+)\..*/\10\20/p')
-    echo "db_version_major: ${db_version_major}, zbx_version_major: ${zbx_version_major}"
+    # the mandatory schema version this image creates is the one its zabbix_server binary expects. Comparing the
+    # full number also covers pre-releases, whose schema version doesn't follow the release number (8.0.0rc2 uses
+    # 7050195) and may change between release candidates
+    image_db_version=$(zcat /usr/share/doc/zabbix-server-postgresql/create.sql.gz 2>/dev/null | sed -nE "s/^INSERT INTO dbversion VALUES \('1','([0-9]+)'.*/\1/p" || true)
+    if [[ -n $image_db_version ]]; then
+        db_version_cmp=${db_version}
+        zbx_version_cmp=${image_db_version}
+    else
+        # fallback: compare major releases only
+        db_version_cmp=${db_version:0:4}
+        zbx_version_cmp=$(/usr/sbin/zabbix_server --version | sed -nE '1s/.* ([0-9]+)\.([0-9]+)\..*/\10\20/p')
+    fi
+    echo "db schema version: ${db_version_cmp}, schema version expected by zabbix_server: ${zbx_version_cmp}"
 
 
-    # compare those and figure whether a major release upgrade is necessary
-    if [[ $zbx_version_major -gt $db_version_major ]]; then
+    # compare those and figure whether a schema upgrade is necessary
+    if [[ $zbx_version_cmp -gt $db_version_cmp ]]; then
         echo "** initializing the major release upgrade process"
         # in case of an upgrade, it doesn't matter if we come from an HA-enabled or a single-node setup. We will after preparation start a single-node
         # pod anyway which will not fail if it finds an entry of a non-HA-enabled one in the database.
@@ -96,8 +106,8 @@ init_and_upgrade_db() {
         exit 0
 
 
-    elif [[ $zbx_version_major -lt $db_version_major ]]; then
-        echo "*** FATAL database schema version ${db_version_major} is higher than zabbix server's ${zbx_version_major}, downgrade is not supported!"
+    elif [[ $zbx_version_cmp -lt $db_version_cmp ]]; then
+        echo "*** FATAL database schema version ${db_version_cmp} is higher than zabbix server's ${zbx_version_cmp}, downgrade is not supported!"
         exit 252
 
     else
