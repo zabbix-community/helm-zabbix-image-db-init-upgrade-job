@@ -1,0 +1,7 @@
+# Versions of the tools used to develop and test this image.
+# See: docs/requirements.md
+[tools]
+hadolint = "2.15.1"
+kind = "0.33.0"
+kubectl = "1.37.2"
+shellcheck = "0.11.0"

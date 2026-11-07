@@ -1,0 +1,5 @@
+# Configuration of hadolint, used by "make lint". See: https://github.com/hadolint/hadolint
+ignored:
+  # The versions of the apk packages come from the Alpine release of the base image (zabbix/zabbix-server-pgsql),
+  # which changes with each Zabbix major version, so they are not pinned
+  - DL3018

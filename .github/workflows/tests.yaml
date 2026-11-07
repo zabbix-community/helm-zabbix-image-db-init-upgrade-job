@@ -1,0 +1,42 @@
+name: Lint and Tests
+
+on:
+  workflow_dispatch:
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install the tools of mise.toml
+        uses: jdx/mise-action@v5
+
+      - name: Run make lint
+        run: make lint
+
+  test:
+    runs-on: ubuntu-latest
+    needs: [lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        major_version: ["7.4", "8.0"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Build the image
+        run: make build MAJOR_VERSION=${{ matrix.major_version }}
+
+      - name: Run the tests with Docker and PostgreSQL
+        run: make test MAJOR_VERSION=${{ matrix.major_version }}
+
+      - name: Run the test of a schema upgrade from Zabbix 7.4
+        if: matrix.major_version == '8.0'
+        run: make test-upgrade MAJOR_VERSION=${{ matrix.major_version }}

@@ -1,9 +1,19 @@
 name: Docker Build and Push
 
+# Each run publishes the tags <major version>-<timestamp> of all the major versions of the matrix, with the same
+# timestamp. After a run, update zabbixServer.zabbixServerHA.dbCreateUpgradeJob.image.tagSuffix in the Helm chart.
+# See the "Release process" section of README.md.
 on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.github/CODEOWNERS'
   workflow_dispatch:
 
 env:
@@ -34,13 +44,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        major_version: ["6.0", "6.4", "7.0", "7.2", "7.4"]
-        include:
-          # pre-release: trunk images carry no major release in their tag, so pin a known build by digest
-          # (zabbix/zabbix-server-pgsql:alpine-trunk = 8.0.0rc2 as of 2026-10-09)
-          - major_version: "8.0"
-            tag_prefix: "8.0-trunk"
-            base_image: "zabbix/zabbix-server-pgsql:alpine-trunk@sha256:fa798bd0b8ebc3201672bd418841267e51443fef741931323b0c418086d8b092"
+        # Zabbix major versions. The base image is zabbix/zabbix-server-pgsql:alpine-<major version>-latest.
+        # Use "include" with "tag_prefix" and "base_image" to build from an image without a major release in its tag,
+        # e.g. a digest-pinned pre-release (trunk) image. Never use a pre-release image for a published major version:
+        # its schema version is different from the one of the release
+        major_version: ["6.0", "6.4", "7.0", "7.2", "7.4", "8.0"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
